@@ -172,7 +172,7 @@ Av. Ramazan UZUN`;function Pa(){let[e,t]=(0,_.useState)(``),[n,r]=(0,_.useState)
 
 `+e.target.value):b(`İHTARNAME
 
-`+e.target.value)}})]}),(0,U.jsxs)(`div`,{className:`action-bar`,children:[(0,U.jsx)(`button`,{className:`btn-secondary`,onClick:()=>{if(!l.ORAN||!l.RESULT_ORAN){alert(`⚠️ HATA: Lütfen 'ORAN' ve 'RESULT_ORAN' alanlarını doldurunuz! Bu alanlar zorunludur.`);return}let e=new Blob([s===`template_dava`?g:y],{type:`text/plain;charset=utf-8`}),t=URL.createObjectURL(e),n=document.createElement(`a`);n.href=t,n.download=`${s===`template_dava`?`dava_dilekcesi`:`ihtarname`}.udf`,n.click(),URL.revokeObjectURL(t)},children:`UDF Olarak İndir 💾`}),(0,U.jsx)(`button`,{className:`btn-secondary`,onClick:()=>{let e=(s===`template_dava`?g:y).split(`
+`+e.target.value)}})]}),(0,U.jsxs)(`div`,{className:`action-bar`,children:[(0,U.jsx)(`button`,{className:`btn-secondary`,onClick:()=>{let e=new Blob([s===`template_dava`?g:y],{type:`text/plain;charset=utf-8`}),t=URL.createObjectURL(e),n=document.createElement(`a`);n.href=t,n.download=`${s===`template_dava`?`dava_dilekcesi`:`ihtarname`}.udf`,n.click(),URL.revokeObjectURL(t)},children:`UDF Olarak İndir 💾`}),(0,U.jsx)(`button`,{className:`btn-secondary`,onClick:()=>{let e=(s===`template_dava`?g:y).split(`
 `),t=e[0],n=e.findIndex(e=>e.includes(`Davacı Vekili`)||e.includes(`İhtar Eden Vekili`)),r=[],i=[];n===-1?r=e.slice(1):(r=e.slice(1,n),i=e.slice(n));let a=document.title;document.title=``;let o=document.createElement(`style`);o.innerHTML=`
                   @page { 
                     margin: 0; 
