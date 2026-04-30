@@ -239,9 +239,10 @@ function App() {
     const propertyRegex = /Müvekkilim UZMAN TAŞINMAZ YATIRIMLARI LTD\.ŞTİ\s*[,:]\s*([\s\S]*?)(?=Taşınmazın ihale öncesi)/i;
     const propertyMatch = text.match(propertyRegex);
 
-    // New Extraction for ACIKLAMA (Targeted under AÇIKLAMALAR section)
+    // New Extraction for ACIKLAMA and ORAN (Targeted under AÇIKLAMALAR section)
     const aciklamalarIdx = lowerText.indexOf('açıklamalar');
     let detectedAciklama = '';
+    let detectedOran = '';
 
     if (aciklamalarIdx !== -1) {
       const textAfterAciklamalar = text.substring(aciklamalarIdx);
@@ -254,8 +255,15 @@ function App() {
         const hissesiniIdx = subAfterCompany.toLowerCase().indexOf('hissesini');
 
         if (hissesiniIdx !== -1) {
-          // Clean up potential starting punctuation like comma or colon
-          detectedAciklama = subAfterCompany.substring(0, hissesiniIdx)
+          const areaBeforeHissesini = subAfterCompany.substring(0, hissesiniIdx);
+          
+          // Detect Oran (e.g., 1/4, 3/8)
+          const oranMatch = areaBeforeHissesini.match(/(\d+\/\d+)/);
+          if (oranMatch) detectedOran = oranMatch[0];
+
+          // Clean up potential starting punctuation like comma or colon for ACIKLAMA
+          detectedAciklama = areaBeforeHissesini
+            .replace(/(\d+\/\d+)/g, '') // Remove the ratio from description
             .replace(/^[\s,:]+/, '')
             .trim();
         }
@@ -266,7 +274,11 @@ function App() {
       // Fallback to previous robust regex if the above specific logic fails
       const aciklamaRegex = /(?:UZMAN\s+TAŞINMAZ\s+YATIRIMLARI\s+(?:LTD\.?\s*ŞTİ\.?|LİMİTED\s+ŞİRKETİ))\s*[,:]?\s*([\s\S]*?)(?=hissesini)/i;
       const match = text.match(aciklamaRegex);
-      if (match && match[1]) detectedAciklama = match[1].trim();
+      if (match && match[1]) {
+        detectedAciklama = match[1].replace(/(\d+\/\d+)/g, '').trim();
+        const oranMatch = match[1].match(/(\d+\/\d+)/);
+        if (oranMatch) detectedOran = oranMatch[0];
+      }
     }
 
     if (propertyMatch && propertyMatch[1]) {
@@ -287,6 +299,7 @@ function App() {
     console.log("Muhatap:", detectedMuhatap);
     console.log("Adres:", detectedAddress);
     console.log("Açıklama:", detectedAciklama);
+    console.log("Oran:", detectedOran);
     console.log("Tarih:", detectedDate);
     console.log("-----------------------");
 
@@ -294,8 +307,9 @@ function App() {
       MUHATAP: detectedMuhatap,
       ADRES: detectedAddress,
       TARIH: detectedDate,
-      ACIKLAMA: detectedAciklama, // Add this to hub
-      ORAN: ''
+      ACIKLAMA: detectedAciklama,
+      ORAN: detectedOran,
+      RESULT_ORAN: detectedOran
     };
 
     setHubData(newHubData);
@@ -313,7 +327,9 @@ function App() {
       ACIKLAMA_DATE: dateRange,
       RESULT_DATE: detectedDate,
       HARAM_DATE: detectedDate,
-      HARAM_DAY_DATE: today
+      HARAM_DAY_DATE: today,
+      ORAN: detectedOran,
+      RESULT_ORAN: detectedOran
     }));
 
     setIhtarParams(prev => ({
