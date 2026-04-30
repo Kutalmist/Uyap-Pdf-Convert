@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import * as pdfjs from 'pdfjs-dist';
 import pdfjsWorker from 'pdfjs-dist/build/pdf.worker.mjs?url';
+import * as mammoth from 'mammoth/mammoth.browser';
 
 // Set up the worker
 pdfjs.GlobalWorkerOptions.workerSrc = pdfjsWorker;
@@ -361,9 +362,34 @@ function App() {
     }
   };
 
+  const extractTextFromDocx = async (file) => {
+    setLoading(true);
+    setError(null);
+    try {
+      const arrayBuffer = await file.arrayBuffer();
+      const result = await mammoth.extractRawText({ arrayBuffer });
+      const text = result.value;
+      setExtractedText(text);
+      autoFillHub(text);
+    } catch (err) {
+      setError('DOCX okuma hatası.');
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleFileChange = (e) => {
     const file = e.target.files[0];
-    if (file && file.type === 'application/pdf') extractTextFromPDF(file);
+    if (!file) return;
+
+    if (file.type === 'application/pdf') {
+      extractTextFromPDF(file);
+    } else if (file.type === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' || file.name.endsWith('.docx')) {
+      extractTextFromDocx(file);
+    } else {
+      alert('Lütfen sadece PDF veya DOCX dosyası yükleyin.');
+    }
   };
 
   const handleCopy = (text) => {
@@ -389,8 +415,8 @@ function App() {
 
           <div className="upload-section" onClick={() => fileInputRef.current?.click()}>
             <div className="upload-icon">📤</div>
-            <h3>{loading ? 'İşleniyor...' : 'Yeni PDF Yükle'}</h3>
-            <input type="file" ref={fileInputRef} onChange={handleFileChange} accept="application/pdf" style={{ display: 'none' }} />
+            <h3>{loading ? 'İşleniyor...' : 'Yeni Dosya Yükle (PDF/DOCX)'}</h3>
+            <input type="file" ref={fileInputRef} onChange={handleFileChange} accept=".pdf,.docx" style={{ display: 'none' }} />
           </div>
 
           {extractedText && (
@@ -453,255 +479,283 @@ function App() {
         <div className="result-section">
           <header>
             <h3>PDF Ham Metin</h3>
-            <p className="subtitle">PDF yükleyin ve ayıklanan tüm metni buradan inceleyin.</p>
+            <p className="subtitle">Dosya yükleyin ve ayıklanan tüm metni buradan inceleyin.</p>
           </header>
 
           <div className="action-bar" style={{ justifyContent: 'center', marginBottom: '2rem' }}>
             <button className="btn-secondary" onClick={() => fileInputRef.current?.click()}>
-              {loading ? 'Yükleniyor...' : 'Yeni PDF Yükle'}
+              {loading ? 'Yükleniyor...' : 'Yeni Dosya Yükle (PDF/DOCX)'}
             </button>
-            <input type="file" ref={fileInputRef} onChange={handleFileChange} accept="application/pdf" style={{ display: 'none' }} />
+            <input type="file" ref={fileInputRef} onChange={handleFileChange} accept=".pdf,.docx" style={{ display: 'none' }} />
           </div>
 
-          <div className="editor-container">
-            <textarea className="text-editor" value={extractedText} onChange={(e) => setExtractedText(e.target.value)} />
-          </div>
-          <div className="action-bar">
-            <button className="btn-primary" onClick={() => handleCopy(extractedText)}>Metni Kopyala</button>
-          </div>
+          {extractedText ? (
+            <>
+              <div className="editor-container">
+                <textarea className="text-editor" value={extractedText} onChange={(e) => setExtractedText(e.target.value)} />
+              </div>
+              <div className="action-bar">
+                <button className="btn-primary" onClick={() => handleCopy(extractedText)}>Metni Kopyala</button>
+              </div>
+            </>
+          ) : (
+            <div style={{ textAlign: 'center', padding: '4rem', color: '#94a3b8' }}>
+              <p>Henüz metin bulunamadı. Lütfen bir PDF veya DOCX dosyası yükleyin.</p>
+            </div>
+          )}
         </div>
       )}
 
       {(view === 'template_dava' || view === 'template_ihtar') && (
         <div className="template-view">
-          <div className="sidebar">
-            <h3>Parametreler</h3>
-            <div className="params-grid">
-              {Object.keys(view === 'template_dava' ? davaParams : ihtarParams).map(key => (
-                <div key={key} className="param-item">
-                  <label>{key}</label>
-                  {(key === 'DAVALI' || key === 'MUHATAP' || key === 'ACIKLAMA' || key === 'DESCRIPT_ADDRESS' || key === 'TESCIL_BELGESI') ? (
-                    <textarea
-                      rows={3}
-                      value={view === 'template_dava' ? davaParams[key] : ihtarParams[key]}
-                      onChange={(e) => {
-                        const setter = view === 'template_dava' ? setDavaParams : setIhtarParams;
-                        const params = view === 'template_dava' ? davaParams : ihtarParams;
-                        setter({ ...params, [key]: e.target.value });
-                      }}
-                    />
-                  ) : (
-                    <input
-                      type="text"
-                      value={view === 'template_dava' ? davaParams[key] : ihtarParams[key]}
-                      onChange={(e) => {
-                        const setter = view === 'template_dava' ? setDavaParams : setIhtarParams;
-                        const params = view === 'template_dava' ? davaParams : ihtarParams;
-                        setter({ ...params, [key]: e.target.value });
-                      }}
-                    />
-                  )}
-                </div>
-              ))}
+          {extractedText ? (
+            <div className="sidebar">
+              <h3>Parametreler</h3>
+              <div className="params-grid">
+                {Object.keys(view === 'template_dava' ? davaParams : ihtarParams).map(key => (
+                  <div key={key} className="param-item">
+                    <label>{key}</label>
+                    {(key === 'DAVALI' || key === 'MUHATAP' || key === 'ACIKLAMA' || key === 'DESCRIPT_ADDRESS' || key === 'TESCIL_BELGESI') ? (
+                      <textarea
+                        rows={3}
+                        value={view === 'template_dava' ? davaParams[key] : ihtarParams[key]}
+                        onChange={(e) => {
+                          const setter = view === 'template_dava' ? setDavaParams : setIhtarParams;
+                          const params = view === 'template_dava' ? davaParams : ihtarParams;
+                          setter({ ...params, [key]: e.target.value });
+                        }}
+                      />
+                    ) : (
+                      <input
+                        type="text"
+                        value={view === 'template_dava' ? davaParams[key] : ihtarParams[key]}
+                        onChange={(e) => {
+                          const setter = view === 'template_dava' ? setDavaParams : setIhtarParams;
+                          const params = view === 'template_dava' ? davaParams : ihtarParams;
+                          setter({ ...params, [key]: e.target.value });
+                        }}
+                      />
+                    )}
+                  </div>
+                ))}
+              </div>
             </div>
-          </div>
+          ) : null}
 
           <div className="editor-main">
-            <header>
-              <h3>{view === 'template_dava' ? 'Dava Dilekçesi Düzenle' : 'İhtarname Düzenle'}</h3>
-              <p className="subtitle">Hazırlanan metni aşağıdan doğrudan düzenleyebilirsiniz.</p>
-            </header>
+            {extractedText ? (
+              <>
+                <header>
+                  <h3>{view === 'template_dava' ? 'Dava Dilekçesi Düzenle' : 'İhtarname Düzenle'}</h3>
+                  <p className="subtitle">Hazırlanan metni aşağıdan doğrudan düzenleyebilirsiniz.</p>
+                </header>
+                <div className="editor-container" style={{ display: 'flex', flexDirection: 'column' }}>
+                  {/* Centered Title Editor */}
+                  <div style={{ textAlign: 'center', marginBottom: '1.5rem' }}>
+                    <input
+                      style={{
+                        textAlign: 'center',
+                        fontSize: '14pt',
+                        fontWeight: 'bold',
+                        background: 'transparent',
+                        border: 'none',
+                        color: '#fff',
+                        width: '100%',
+                        fontFamily: '"Times New Roman", Times, serif'
+                      }}
+                      value={view === 'template_dava' ? TEMPLATE_TITLE : "İHTARNAME"}
+                      readOnly
+                    />
+                  </div>
 
-            <div className="editor-container" style={{ display: 'flex', flexDirection: 'column' }}>
-              {/* Centered Title Editor */}
-              <div style={{ textAlign: 'center', marginBottom: '1.5rem' }}>
-                <input
-                  style={{
-                    textAlign: 'center',
-                    fontSize: '14pt',
-                    fontWeight: 'bold',
-                    background: 'transparent',
-                    border: 'none',
-                    color: '#fff',
-                    width: '100%',
-                    fontFamily: '"Times New Roman", Times, serif'
-                  }}
-                  value={view === 'template_dava' ? TEMPLATE_TITLE : "İHTARNAME"}
-                  readOnly
-                />
+                  <textarea
+                    className="text-editor"
+                    value={view === 'template_dava' ? davaText.replace(TEMPLATE_TITLE + "\n\n", "") : ihtarText.replace("İHTARNAME\n\n", "")}
+                    onChange={(e) => {
+                      if (view === 'template_dava') setDavaText(TEMPLATE_TITLE + "\n\n" + e.target.value);
+                      else setIhtarText("İHTARNAME\n\n" + e.target.value);
+                    }}
+                  />
+                </div>
+                <div className="action-bar">
+                  <button className="btn-secondary" onClick={() => {
+                    const text = view === 'template_dava' ? davaText : ihtarText;
+                    if (!text) {
+                      alert("İndirilecek metin bulunamadı!");
+                      return;
+                    }
+                    const blob = new Blob([text], { type: 'text/plain;charset=utf-8' });
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.style.display = 'none';
+                    a.href = url;
+                    a.download = `${view === 'template_dava' ? 'dava_dilekcesi' : 'ihtarname'}.udf`;
+                    document.body.appendChild(a);
+                    a.click();
+                    setTimeout(() => {
+                      document.body.removeChild(a);
+                      window.URL.revokeObjectURL(url);
+                    }, 100);
+                  }}>
+                    UDF Olarak İndir 💾
+                  </button>
+                  <button className="btn-secondary" onClick={() => {
+                    const fullText = view === 'template_dava' ? davaText : ihtarText;
+                    const lines = fullText.split('\n');
+                    const title = lines[0];
+
+                    // Logic to identify signature block
+                    const signatureStartIdx = lines.findIndex(line => line.includes('Davacı Vekili') || line.includes('İhtar Eden Vekili'));
+                    let bodyLines = [];
+                    let signatureLines = [];
+
+                    if (signatureStartIdx !== -1) {
+                      bodyLines = lines.slice(1, signatureStartIdx);
+                      signatureLines = lines.slice(signatureStartIdx);
+                    } else {
+                      bodyLines = lines.slice(1);
+                    }
+
+                    // Temporary title change to hide URL/Title in print
+                    const originalTitle = document.title;
+                    document.title = "";
+
+                    // Create a temporary style for printing
+                    const style = document.createElement('style');
+                    style.innerHTML = `
+                      @page { 
+                        margin: 0; 
+                        size: A4;
+                      }
+                      @media print {
+                        body { margin: 0; }
+                        body * { visibility: hidden; }
+                        .print-container, .print-container * { visibility: visible; }
+                        .print-container {
+                          position: absolute;
+                          left: 0;
+                          top: 0;
+                          width: 210mm;
+                          min-height: 297mm;
+                          padding: 1.5cm;
+                          box-sizing: border-box;
+                          font-family: "Times New Roman", Times, serif;
+                          font-size: 12pt;
+                          line-height: 1.5;
+                          color: black !important;
+                          background: white !important;
+                        }
+                        .print-title {
+                          text-align: center;
+                          font-weight: bold;
+                          margin-bottom: 2rem;
+                          display: block;
+                        }
+                        .print-body {
+                          text-align: justify;
+                          white-space: pre-wrap;
+                          display: block;
+                          margin-bottom: 3rem;
+                        }
+                        .print-signature {
+                          text-align: center;
+                          margin-left: auto;
+                          margin-right: 2cm;
+                          width: 8cm;
+                          margin-top: 3rem;
+                          font-weight: bold;
+                          white-space: pre-line;
+                        }
+                      }
+                    `;
+                    document.head.appendChild(style);
+
+                    // Create print container
+                    const printContainer = document.createElement('div');
+                    printContainer.className = 'print-container';
+
+                    const titleDiv = document.createElement('div');
+                    titleDiv.className = 'print-title';
+                    titleDiv.innerText = title;
+
+                    const bodyDiv = document.createElement('div');
+                    bodyDiv.className = 'print-body';
+
+                    // Format body text to bold ONLY specific headers
+                    const headersToBold = [
+                      "DAVACI", "ADRES", "VEKİLİ", "DAVALILAR", "DAVA",
+                      "DAVA DEĞERİ", "AÇIKLAMALAR", "HUKUKİ NEDENLER",
+                      "DELİLLER", "SONUÇ VE İSTEM", "İhtar Eden Keşideci", "Konu"
+                    ];
+
+                    let formattedBody = bodyLines.join('\n');
+                    headersToBold.forEach(header => {
+                      const regex = new RegExp(`^(${header}\\s*:)`, 'gm');
+                      formattedBody = formattedBody.replace(regex, '<strong>$1</strong>');
+                    });
+
+                    // Specific fix for DAVA DEĞERİ: Bold the whole line and the following amount line
+                    formattedBody = formattedBody.replace(
+                      /<strong>DAVA DEĞERİ:<\/strong>(.*)\n(şimdilik 1000,00TL)/i,
+                      '<strong>DAVA DEĞERİ:$1\n$2</strong>'
+                    );
+
+                    // Bold specific EK references
+                    formattedBody = formattedBody.replace(/(\(EK 1:Tescil belgesi\))/g, '<strong>$1</strong>');
+
+                    // Bold specific ownership sentence
+                    formattedBody = formattedBody.replace(/(Müvekkil şirket .*? malikidir\.)/g, '<strong>$1</strong>');
+
+                    // Bold main demand paragraph
+                    formattedBody = formattedBody.replace(/(tarihleri arasında davalı[\s\S]*?tahsiline karar verilmesini istemekteyiz\.)/g, '<strong>$1</strong>');
+
+                    bodyDiv.innerHTML = formattedBody;
+
+                    printContainer.appendChild(titleDiv);
+                    printContainer.appendChild(bodyDiv);
+
+                    if (signatureLines.length > 0) {
+                      const sigDiv = document.createElement('div');
+                      sigDiv.className = 'print-signature';
+                      sigDiv.innerText = signatureLines.join('\n');
+                      printContainer.appendChild(sigDiv);
+                    }
+
+                    document.body.appendChild(printContainer);
+
+                    window.print();
+
+                    // Cleanup
+                    document.head.removeChild(style);
+                    document.body.removeChild(printContainer);
+                    document.title = originalTitle;
+                  }}>
+                    Yazdır / PDF Olarak Kaydet 🖨️
+                  </button>
+                  <button className="btn-primary" onClick={() => handleCopy(view === 'template_dava' ? davaText : ihtarText)}>
+                    Tamamlanan Metni Kopyala
+                  </button>
+                </div>
+                <p style={{ fontSize: '0.75rem', color: '#94a3b8', marginTop: '1rem', textAlign: 'center' }}>
+                  * Not: İndirilen .udf dosyası metin tabanlı bir taslaktır. UYAP Editör'de açıp imzalayarak kullanabilirsiniz.
+                </p>
+              </>
+            ) : (
+              <div style={{ 
+                display: 'flex', 
+                flexDirection: 'column',
+                justifyContent: 'center', 
+                alignItems: 'center', 
+                height: '60vh', 
+                color: '#94a3b8',
+                textAlign: 'center',
+                width: '100%'
+              }}>
+                <p style={{ fontSize: '1.2rem', maxWidth: '400px', lineHeight: '1.6' }}>
+                  Şablonu oluşturmak için önce <strong>Ham Metin</strong> sekmesinden bir dosya (PDF/DOCX) yüklemelisiniz.
+                </p>
               </div>
-
-              <textarea
-                className="text-editor"
-                value={view === 'template_dava' ? davaText.replace(TEMPLATE_TITLE + "\n\n", "") : ihtarText.replace("İHTARNAME\n\n", "")}
-                onChange={(e) => {
-                  if (view === 'template_dava') setDavaText(TEMPLATE_TITLE + "\n\n" + e.target.value);
-                  else setIhtarText("İHTARNAME\n\n" + e.target.value);
-                }}
-              />
-            </div>
-            <div className="action-bar">
-              <button className="btn-secondary" onClick={() => {
-                const text = view === 'template_dava' ? davaText : ihtarText;
-                if (!text) {
-                  alert("İndirilecek metin bulunamadı!");
-                  return;
-                }
-                const blob = new Blob([text], { type: 'text/plain;charset=utf-8' });
-                const url = URL.createObjectURL(blob);
-                const a = document.createElement('a');
-                a.style.display = 'none';
-                a.href = url;
-                a.download = `${view === 'template_dava' ? 'dava_dilekcesi' : 'ihtarname'}.udf`;
-                document.body.appendChild(a);
-                a.click();
-                setTimeout(() => {
-                  document.body.removeChild(a);
-                  window.URL.revokeObjectURL(url);
-                }, 100);
-              }}>
-                UDF Olarak İndir 💾
-              </button>
-              <button className="btn-secondary" onClick={() => {
-                const fullText = view === 'template_dava' ? davaText : ihtarText;
-                const lines = fullText.split('\n');
-                const title = lines[0];
-
-                // Logic to identify signature block
-                const signatureStartIdx = lines.findIndex(line => line.includes('Davacı Vekili') || line.includes('İhtar Eden Vekili'));
-                let bodyLines = [];
-                let signatureLines = [];
-
-                if (signatureStartIdx !== -1) {
-                  bodyLines = lines.slice(1, signatureStartIdx);
-                  signatureLines = lines.slice(signatureStartIdx);
-                } else {
-                  bodyLines = lines.slice(1);
-                }
-
-                // Temporary title change to hide URL/Title in print
-                const originalTitle = document.title;
-                document.title = "";
-
-                // Create a temporary style for printing
-                const style = document.createElement('style');
-                style.innerHTML = `
-                  @page { 
-                    margin: 0; 
-                    size: A4;
-                  }
-                  @media print {
-                    body { margin: 0; }
-                    body * { visibility: hidden; }
-                    .print-container, .print-container * { visibility: visible; }
-                    .print-container {
-                      position: absolute;
-                      left: 0;
-                      top: 0;
-                      width: 210mm;
-                      min-height: 297mm;
-                      padding: 1.5cm;
-                      box-sizing: border-box;
-                      font-family: "Times New Roman", Times, serif;
-                      font-size: 12pt;
-                      line-height: 1.5;
-                      color: black !important;
-                      background: white !important;
-                    }
-                    .print-title {
-                      text-align: center;
-                      font-weight: bold;
-                      margin-bottom: 2rem;
-                      display: block;
-                    }
-                    .print-body {
-                      text-align: justify;
-                      white-space: pre-wrap;
-                      display: block;
-                      margin-bottom: 3rem;
-                    }
-                    .print-signature {
-                      text-align: center;
-                      margin-left: auto;
-                      margin-right: 2cm;
-                      width: 8cm;
-                      margin-top: 3rem;
-                      font-weight: bold;
-                      white-space: pre-line;
-                    }
-                  }
-                `;
-                document.head.appendChild(style);
-
-                // Create print container
-                const printContainer = document.createElement('div');
-                printContainer.className = 'print-container';
-
-                const titleDiv = document.createElement('div');
-                titleDiv.className = 'print-title';
-                titleDiv.innerText = title;
-
-                const bodyDiv = document.createElement('div');
-                bodyDiv.className = 'print-body';
-
-                // Format body text to bold ONLY specific headers
-                const headersToBold = [
-                  "DAVACI", "ADRES", "VEKİLİ", "DAVALILAR", "DAVA",
-                  "DAVA DEĞERİ", "AÇIKLAMALAR", "HUKUKİ NEDENLER",
-                  "DELİLLER", "SONUÇ VE İSTEM", "İhtar Eden Keşideci", "Konu"
-                ];
-
-                let formattedBody = bodyLines.join('\n');
-                headersToBold.forEach(header => {
-                  const regex = new RegExp(`^(${header}\\s*:)`, 'gm');
-                  formattedBody = formattedBody.replace(regex, '<strong>$1</strong>');
-                });
-
-                // Specific fix for DAVA DEĞERİ: Bold the whole line and the following amount line
-                formattedBody = formattedBody.replace(
-                  /<strong>DAVA DEĞERİ:<\/strong>(.*)\n(şimdilik 1000,00TL)/i,
-                  '<strong>DAVA DEĞERİ:$1\n$2</strong>'
-                );
-
-                // Bold specific EK references
-                formattedBody = formattedBody.replace(/(\(EK 1:Tescil belgesi\))/g, '<strong>$1</strong>');
-
-                // Bold specific ownership sentence
-                formattedBody = formattedBody.replace(/(Müvekkil şirket .*? malikidir\.)/g, '<strong>$1</strong>');
-
-                // Bold main demand paragraph
-                formattedBody = formattedBody.replace(/(tarihleri arasında davalı[\s\S]*?tahsiline karar verilmesini istemekteyiz\.)/g, '<strong>$1</strong>');
-
-                bodyDiv.innerHTML = formattedBody;
-
-                printContainer.appendChild(titleDiv);
-                printContainer.appendChild(bodyDiv);
-
-                if (signatureLines.length > 0) {
-                  const sigDiv = document.createElement('div');
-                  sigDiv.className = 'print-signature';
-                  sigDiv.innerText = signatureLines.join('\n');
-                  printContainer.appendChild(sigDiv);
-                }
-
-                document.body.appendChild(printContainer);
-
-                window.print();
-
-                // Cleanup
-                document.head.removeChild(style);
-                document.body.removeChild(printContainer);
-                document.title = originalTitle;
-              }}>
-                Yazdır / PDF Olarak Kaydet 🖨️
-              </button>
-              <button className="btn-primary" onClick={() => handleCopy(view === 'template_dava' ? davaText : ihtarText)}>
-                Tamamlanan Metni Kopyala
-              </button>
-            </div>
-            <p style={{ fontSize: '0.75rem', color: '#94a3b8', marginTop: '1rem', textAlign: 'center' }}>
-              * Not: İndirilen .udf dosyası metin tabanlı bir taslaktır. UYAP Editör'de açıp imzalayarak kullanabilirsiniz.
-            </p>
+            )}
           </div>
         </div>
       )}
