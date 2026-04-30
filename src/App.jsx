@@ -82,8 +82,8 @@ DELİLLER :    Davalıların sunacağı her türlü delile mukabil delil sunma h
 5-Tanık, keşif, bilirkişi, yemin, isticvap ve her türlü yasal delil
 
 SONUÇ VE İSTEM :    Yukarıda arz ve izah edilen ve resen gözetilecek nedenler çerçevesinde:
-Gelecek dönemlerde işleyecek fazlaya ilişkin haklarımız saklı {{RESULT_DATE}} tarihleri arasında
-ecrimisil bedelinin müvekkilimin hissedar olduğu {{ACIKLAMA_DATE}} hisseye tekabül ettiği kadarının haksız fiil
+Gelecek dönemlerde işleyecek fazlaya ilişkin haklarımız saklı {{ACIKLAMA_DATE}} tarihleri arasında
+ecrimisil bedelinin müvekkilimin hissedar olduğu {{RESULT_DATE}} hisseye tekabül ettiği kadarının haksız fiil
 tarihinden {{HARAM_DATE}} itibaren yasal faizi ile birlikte davalıdan tahsili ile müvekkil davacıya
 verilmesini, vekalet ücreti ve yargılama giderlerinin davalılar üzerinde bırakılmasını talep ederim.
 Saygılarımla.{{HARAM_DAY_DATE}}
