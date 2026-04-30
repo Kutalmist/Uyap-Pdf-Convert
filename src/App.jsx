@@ -539,10 +539,6 @@ function App() {
             </div>
             <div className="action-bar">
               <button className="btn-secondary" onClick={() => {
-                if (!hubData.ORAN || !hubData.RESULT_ORAN) {
-                  alert("⚠️ HATA: Lütfen 'ORAN' ve 'RESULT_ORAN' alanlarını doldurunuz! Bu alanlar zorunludur.");
-                  return;
-                }
                 const text = view === 'template_dava' ? davaText : ihtarText;
                 const blob = new Blob([text], { type: 'text/plain;charset=utf-8' });
                 const url = URL.createObjectURL(blob);
