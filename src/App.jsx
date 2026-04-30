@@ -380,7 +380,7 @@ function App() {
       {view === 'data_hub' && (
         <div className="hub-view">
           <header>
-            <h1>Veri Ayıklama Merkezi</h1>
+            <h1>UDF Convert Metin Merkezi</h1>
             <p className="subtitle">PDF yükleyin, verileri onaylayın ve şablonlara aktarın.</p>
           </header>
 
